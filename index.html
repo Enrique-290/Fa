@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Módulo de Facturación – Demo (Frontend Vercel)</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{ --primary:#e11; --dark:#111; --muted:#f5f5f7 }
+  *{box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Inter,Arial,sans-serif}
+  body{margin:0;background:var(--muted);color:#222}
+  header{position:sticky;top:0;background:#fff;border-bottom:1px solid #e5e7eb;z-index:10}
+  .bar{max-width:1100px;margin:auto;display:flex;align-items:center;gap:12px;padding:12px 16px}
+  h1{font-size:18px;margin:0;font-weight:800;color:var(--dark)}
+  nav{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  nav button{border:1px solid #e5e7eb;background:#fff;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+  nav button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+  main{max-width:1100px;margin:20px auto;padding:0 16px}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 8px rgba(17,17,17,.05)}
+  .row{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+  .col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}.col-12{grid-column:span 12}
+  label{font-size:12px;font-weight:700;color:#555}
+  input,select,textarea{width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff}
+  .actions{display:flex;gap:10px;flex-wrap:wrap}.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+  .btn-primary{background:var(--primary);color:#fff}.btn-outline{background:#fff;border:1px solid #e5e7eb}
+  .table{width:100%;border-collapse:collapse}.table th,.table td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:14px}
+  .chip{padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700}
+  .chip-ok{background:#e6ffed;color:#067d2e;border:1px solid #b8f7c8}
+  .chip-warn{background:#fff7e6;color:#8a5800;border:1px solid #ffe1a8}
+  .right{justify-content:flex-end}.totals{display:flex;gap:20px;flex-wrap:wrap}
+  .kpi{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px 16px;min-width:180px}
+  .kpi .label{font-size:12px;color:#666}.kpi .value{font-size:22px;font-weight:800}
+  .hint{font-size:12px;color:#666}.badge{background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;padding:4px 8px;border-radius:999px;font-weight:700;font-size:12px}
+  .split{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
+  @media (max-width:900px){.row{grid-template-columns:repeat(6,1fr)}.col-6{grid-column:span 6}.col-4{grid-column:span 6}.col-3{grid-column:span 3}.split{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>💼 Módulo de Facturación (Frontend Vercel)</h1>
+    <span class="badge">Compra → Facturar → Reporte</span>
+    <nav>
+      <button id="tab-compra" class="active" onclick="showTab('compra')">Compra</button>
+      <button id="tab-facturacion" onclick="showTab('facturacion')">Facturación</button>
+      <button id="tab-reportes" onclick="showTab('reportes')">Reportes</button>
+    </nav>
+  </div>
+</header>
+<main>
+  <section id="compra" class="tab">
+    <div class="split">
+      <form id="formCompra" class="card" onsubmit="guardarCompra(event)">
+        <h2>🧾 Registrar compra de servicio</h2>
+        <div class="row">
+          <div class="col-6"><label>Proveedor</label><input required name="proveedor" /></div>
+          <div class="col-3"><label>Nº de orden</label><input name="orden" /></div>
+          <div class="col-3"><label>Fecha</label><input type="date" required name="fecha" /></div>
+          <div class="col-4"><label>Costo (MXN)</label><input type="number" step="0.01" required name="costo" /></div>
+          <div class="col-4"><label>Forma de pago</label><select name="formaPago"><option>Tarjeta</option><option>Transferencia</option><option>Efectivo</option></select></div>
+          <div class="col-4"><label>Últimos 4</label><input name="ult4" maxlength="4" /></div>
+          <div class="col-6"><label>Socio</label><input name="socio" /></div>
+          <div class="col-6"><label>Concepto</label><input name="concepto" /></div>
+          <div class="col-12 actions right">
+            <button class="btn btn-outline" type="reset">Limpiar</button>
+            <button class="btn btn-primary" type="submit">Guardar compra</button>
+          </div>
+        </div>
+      </form>
+      <div class="card">
+        <h3>📚 Compras registradas</h3>
+        <div class="row">
+          <div class="col-6"><label>Buscar</label><input id="buscaCompra" oninput="renderCompras()" placeholder="Proveedor, orden..." /></div>
+          <div class="col-6 actions right"><button class="btn btn-outline" onclick="exportarCSV('compras')">Exportar CSV</button></div>
+        </div>
+        <div style="overflow:auto"><table class="table" id="tablaCompras"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="facturacion" class="tab" style="display:none">
+    <div class="split">
+      <form id="formFactura" class="card" onsubmit="emitirFactura(event)">
+        <h2>🧮 Emitir factura al cliente</h2>
+        <div class="row">
+          <div class="col-6"><label>Desde compra</label><select id="linkCompra" onchange="prefillDesdeCompra(this.value)"></select></div>
+          <div class="col-6"><label>Concepto</label><input required name="concepto" /></div>
+          <div class="col-3"><label>Costo</label><input type="number" step="0.01" name="costo" /></div>
+          <div class="col-3"><label>Margen %</label><input type="number" step="0.01" name="margen" value="20" /></div>
+          <div class="col-3"><label>Precio final</label><input type="number" step="0.01" name="precioFinal" /></div>
+          <div class="col-3"><label>Fecha emisión</label><input type="date" name="fechaEmision" /></div>
+          <div class="col-4"><label>RFC</label><input name="rfc" /></div>
+          <div class="col-8"><label>Razón social</label><input name="razon" /></div>
+          <div class="col-12 actions right">
+            <button class="btn btn-outline" type="button" onclick="calcularPrecioFinal()">Calcular precio final</button>
+            <button class="btn btn-primary" type="submit">Guardar factura (demo)</button>
+          </div>
+        </div>
+      </form>
+      <div class="card">
+        <h3>🗂️ Facturas emitidas</h3>
+        <div class="row">
+          <div class="col-6"><label>Buscar</label><input id="buscaFactura" oninput="renderFacturas()" placeholder="RFC, razón, concepto..." /></div>
+          <div class="col-6 actions right"><button class="btn btn-outline" onclick="exportarCSV('facturas')">Exportar CSV</button></div>
+        </div>
+        <div style="overflow:auto"><table class="table" id="tablaFacturas"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="reportes" class="tab" style="display:none">
+    <div class="card">
+      <h2>📈 Reporte y conciliación</h2>
+      <div class="row">
+        <div class="col-4"><label>Desde</label><input type="date" id="rDesde" /></div>
+        <div class="col-4"><label>Hasta</label><input type="date" id="rHasta" /></div>
+        <div class="col-4 actions right"><button class="btn btn-outline" onclick="renderReporte()">Actualizar</button><button class="btn btn-outline" onclick="exportarCSV('reporte')">Exportar CSV</button></div>
+      </div>
+      <div class="totals" style="margin:12px 0">
+        <div class="kpi"><div class="label">Total comprado</div><div id="kpiComprado" class="value">$0</div></div>
+        <div class="kpi"><div class="label">Total facturado</div><div id="kpiFacturado" class="value">$0</div></div>
+        <div class="kpi"><div class="label">Margen</div><div id="kpiMargen" class="value">$0</div></div>
+        <div class="kpi"><div class="label">Pendientes</div><div id="kpiPend" class="value">0</div></div>
+      </div>
+      <div style="overflow:auto"><table class="table" id="tablaReporte"></table></div>
+      <p class="hint">Esta versión es 100% estática y funciona perfecto en Vercel. Cuando conectemos el backend, solo apuntamos las llamadas a <code>/api</code>.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+  const $$=(s,r=document)=>r.querySelector(s);const $$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const money=n=>new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(Number(n||0));
+  const todayISO=()=>new Date().toISOString().slice(0,10);
+  const LS={compras:'fact_demo_compras',facturas:'fact_demo_facturas'};
+  const load=k=>JSON.parse(localStorage.getItem(k)||'[]');const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const uid=()=>Math.random().toString(36).slice(2,9);
+
+  function guardarCompra(e){e.preventDefault();const fd=new FormData(e.target);
+    const c={id:uid(),proveedor:fd.get('proveedor')?.trim(),orden:fd.get('orden')?.trim(),fecha:fd.get('fecha')||todayISO(),
+      costo:Number(fd.get('costo')||0),formaPago:fd.get('formaPago'),ult4:fd.get('ult4')?.trim(),socio:fd.get('socio')?.trim(),
+      concepto:fd.get('concepto')?.trim(),facturado:false};
+    const xs=load(LS.compras);xs.unshift(c);save(LS.compras,xs);e.target.reset();renderCompras();syncSelectorCompras();alert('Compra guardada');}
+
+  function renderCompras(){const q=$$('#buscaCompra').value?.toLowerCase()||'';
+    const xs=load(LS.compras).filter(c=>[c.proveedor,c.orden,c.concepto,c.socio].some(x=>(x||'').toLowerCase().includes(q)));
+    const t=$$('#tablaCompras');t.innerHTML=`<thead><tr><th>Fecha</th><th>Proveedor</th><th>Orden</th><th>Concepto</th><th>Costo</th><th>Pago</th><th>Socio</th><th>Estado</th><th></th></tr></thead>
+      <tbody>${xs.map(c=>`<tr><td>${c.fecha}</td><td>${c.proveedor}</td><td>${c.orden||''}</td><td>${c.concepto||''}</td><td>${money(c.costo)}</td><td>${c.formaPago}${c.ult4?` • ${c.ult4}`:''}</td><td>${c.socio||''}</td><td>${c.facturado?'<span class="chip chip-ok">Facturado</span>':'<span class="chip chip-warn">Pendiente</span>'}</td>
+      <td><button class="btn btn-outline" onclick="enviarAFacturar('${c.id}')">Facturar</button><button class="btn btn-outline" onclick="toggleFacturado('${c.id}')">${c.facturado?'Marcar pendiente':'Marcar facturado'}</button></td></tr>`).join('')}</tbody>`;}
+
+  function eliminarCompra(id){if(!confirm('¿Eliminar compra?'))return;const xs=load(LS.compras).filter(x=>x.id!==id);save(LS.compras,xs);renderCompras();syncSelectorCompras();}
+  function toggleFacturado(id){const xs=load(LS.compras);const c=xs.find(x=>x.id===id);if(c){c.facturado=!c.facturado;save(LS.compras,xs);renderCompras();renderReporte();}}
+  function enviarAFacturar(id){showTab('facturacion');$$('#linkCompra').value=id;prefillDesdeCompra(id);}
+  function syncSelectorCompras(){const sel=$$('#linkCompra');const xs=load(LS.compras);sel.innerHTML=`<option value="">— Selecciona una compra —</option>`+xs.map(c=>`<option value="${c.id}">${c.fecha} • ${c.proveedor} • ${c.concepto||''}</option>`).join('');}
+
+  function prefillDesdeCompra(id){const f=$$('#formFactura');if(!id){f.reset();return;}const c=load(LS.compras).find(x=>x.id===id);if(!c) return;
+    f.concepto.value=c.concepto||`Servicio de ${c.proveedor}`;f.costo.value=c.costo||0;f.margen.value=20;calcularPrecioFinal();f.fechaEmision.value=todayISO();}
+  function calcularPrecioFinal(){const f=$$('#formFactura');const costo=Number(f.costo.value||0);const margen=Number(f.margen.value||0);f.precioFinal.value=(costo*(1+margen/100)).toFixed(2);}
+  function emitirFactura(e){e.preventDefault();const f=e.target;const fd=new FormData(f);
+    const fac={id:uid(),compraId:$$('#linkCompra').value||null,concepto:fd.get('concepto')?.trim(),costo:Number(fd.get('costo')||0),margen:Number(fd.get('margen')||0),
+      precioFinal:Number(fd.get('precioFinal')||0),fechaEmision:fd.get('fechaEmision')||todayISO(),rfc:(fd.get('rfc')||'').toUpperCase(),razon:fd.get('razon')?.trim()};
+    const xs=load(LS.facturas);xs.unshift(fac);save(LS.facturas,xs);if(fac.compraId){const cs=load(LS.compras);const c=cs.find(x=>x.id===fac.compraId);if(c){c.facturado=true;save(LS.compras,cs);}}
+    f.reset();renderFacturas();renderCompras();renderReporte();alert('Factura guardada (demo).');}
+
+  function renderFacturas(){const q=$$('#buscaFactura').value?.toLowerCase()||'';
+    const xs=load(LS.facturas).filter(x=>[x.rfc,x.razon,x.concepto].some(v=>(v||'').toLowerCase().includes(q)));
+    const t=$$('#tablaFacturas');t.innerHTML=`<thead><tr><th>Fecha</th><th>RFC</th><th>Cliente</th><th>Concepto</th><th>Costo</th><th>Precio</th><th>Margen</th></tr></thead>
+      <tbody>${xs.map(f=>`<tr><td>${f.fechaEmision||''}</td><td>${f.rfc||''}</td><td>${f.razon||''}</td><td>${f.concepto||''}</td><td>${money(f.costo)}</td><td>${money(f.precioFinal)}</td><td>${money((f.precioFinal||0)-(f.costo||0))}</td></tr>`).join('')}</tbody>`;}
+
+  function renderReporte(){const desde=$$('#rDesde').value?new Date($$('#rDesde').value):new Date('2000-01-01');const hasta=$$('#rHasta').value?new Date($$('#rHasta').value):new Date('2999-12-31');hasta.setHours(23,59,59,999);
+    const compras=load(LS.compras).filter(c=>{const d=new Date(c.fecha);return d>=desde&&d<=hasta;});const facturas=load(LS.facturas).filter(f=>{const d=new Date(f.fechaEmision||new Date());return d>=desde&&d<=hasta;});
+    const totalComprado=compras.reduce((a,b)=>a+Number(b.costo||0),0);const totalFacturado=facturas.reduce((a,b)=>a+Number(b.precioFinal||0),0);const margen=facturas.reduce((a,b)=>a+(Number(b.precioFinal||0)-Number(b.costo||0)),0);
+    const pendientes=compras.filter(c=>!c.facturado).length;$$('#kpiComprado').textContent=money(totalComprado);$$('#kpiFacturado').textContent=money(totalFacturado);$$('#kpiMargen').textContent=money(margen);$$('#kpiPend').textContent=pendientes;
+    const rows=compras.map(c=>{const relacionadas=facturas.filter(f=>f.compraId===c.id);const totalFac=relacionadas.reduce((a,b)=>a+Number(b.precioFinal||0),0);const totalMarg=relacionadas.reduce((a,b)=>a+(Number(b.precioFinal||0)-Number(b.costo||0)),0);
+      return {fecha:c.fecha,proveedor:c.proveedor,orden:c.orden||'',concepto:c.concepto||'',costo:c.costo,precioFacturado:totalFac,margen:totalMarg,facturado:c.facturado};});
+    const t=$$('#tablaReporte');t.innerHTML=`<thead><tr><th>Fecha</th><th>Proveedor</th><th>Orden</th><th>Concepto</th><th>Costo</th><th>Facturado</th><th>Margen</th><th>Estado</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr><td>${r.fecha}</td><td>${r.proveedor}</td><td>${r.orden}</td><td>${r.concepto}</td><td>${money(r.costo)}</td><td>${money(r.precioFacturado)}</td><td>${money(r.margen)}</td><td>${r.facturado?'<span class=chip chip-ok>Facturado</span>':'<span class=chip chip-warn>Pendiente</span>'}</td></tr>`).join('')}</tbody>`;}
+
+  function exportarCSV(tipo){let data=[];if(tipo==='compras')data=load(LS.compras);if(tipo==='facturas')data=load(LS.facturas);
+    if(tipo==='reporte'){const rows=$$$('#tablaReporte tbody tr').map(tr=>Array.from(tr.children).map(td=>td.innerText));const headers=$$$('#tablaReporte thead th').map(th=>th.innerText);
+      const csv=[headers,...rows].map(r=>r.map(x=>`"${(x||'').replaceAll('"','""')}"`).join(',')).join('\n');descargar(csv,'reporte.csv','text/csv');return;}
+    const csv=[Object.keys(data[0]||{})].concat(data.map(obj=>Object.values(obj))).map(r=>r.map(x=>`"${(x??'').toString().replaceAll('"','""')}"`).join(',')).join('\n');descargar(csv,`${tipo}.csv`,'text/csv');}
+  function descargar(contenido,nombre,tipo){const blob=new Blob([contenido],{type:tipo});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=nombre;document.body.appendChild(link);link.click();link.remove();}
+  function showTab(id){['compra','facturacion','reportes'].forEach(t=>{$$('#'+t).style.display=(t===id)?'block':'none';$$('#tab-'+t)?.classList.toggle('active',t===id);});localStorage.setItem('fact_demo_tab',id);}
+
+  (function init(){$$('#rDesde').value=todayISO();$$('#rHasta').value=todayISO();syncSelectorCompras();renderCompras();renderFacturas();renderReporte();const saved=localStorage.getItem('fact_demo_tab')||'compra';showTab(saved);})();
+</script>
+</body>
+</html>

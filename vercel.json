@@ -1,0 +1,5 @@
+{
+  "version": 2,
+  "name": "facturacion-frontend-demo",
+  "builds": [{ "src": "index.html", "use": "@vercel/static" }]
+}
